@@ -1,0 +1,55 @@
+## Needed before color prompts are loaded, disabled here since it's already enabled in .zshrc.all, preferably keep them together to make that clear
+## Needed to enable colors https://discussions.apple.com/thread/2059528
+#autoload -U colors
+#colors
+
+## Source https://zenbro.github.io/2015/07/23/show-exit-code-of-last-command-in-zsh.html
+setopt PROMPT_SUBST ## This is needed to make RPROMPT execution work  ## https://superuser.com/questions/142099/get-function-into-ps1-zsh
+function check_last_exit_code() {
+  local LAST_EXIT_CODE=$?
+  if [[ $LAST_EXIT_CODE -ne 0 ]]; then
+    local EXIT_CODE_PROMPT=' '
+    EXIT_CODE_PROMPT+="%{$fg[red]%}-%{$reset_color%}"
+    EXIT_CODE_PROMPT+="%{$fg_bold[red]%}$LAST_EXIT_CODE%{$reset_color%}"
+    EXIT_CODE_PROMPT+="%{$fg[red]%}-%{$reset_color%}"
+    echo "$EXIT_CODE_PROMPT"
+  fi
+}
+RPROMPT='$(check_last_exit_code)${RPROMPT_DIRPATH}'
+
+# History is appended after completion of each command and with extended information: timestamp and duration.
+# This means the history is saved in chronological order (of command completion time).
+# However, the history is not shared, so each terminal has its own history while it is open.
+setopt INC_APPEND_HISTORY_TIME
+
+# Keep more entries in memory and in .zsh_history file.
+# HISTSIZE=10000
+# SAVEHIST=5000
+
+# When trimming history file, keep unique commands and trim duplicates first.
+setopt HIST_EXPIRE_DUPS_FIRST
+
+# Do not enter a command into the history if it is a duplicate of the previous event.
+# setopt HIST_IGNORE_DUPS
+
+## More info at https://unix.stackexchange.com/questions/620889/where-does-zsh-store-timestamps-and-execution-times
+## Use by saying history -DE -2
+## Store to file by saying `setopt EXTENDED_HISTORY` if needed
+
+alias history-detailed='history -DE'
+
+# Run before each command execution
+# preexec() {
+#  LAST_COMMAND_START_TIME="${CURRENT_COMMAND_START_TIME}"
+#  CURRENT_COMMAND_START_TIME="$(date)"
+#  RPROMPT+="-${CURRENT_COMMAND_START_TIME}-"
+#}
+
+## TODO - Clean up and have local only run once, currently run from both .zshenv and .zshrc.local
+## More info at https://unix.stackexchange.com/questions/71253/what-should-shouldnt-go-in-zshenv-zshrc-zlogin-zprofile-zlogout
+#if [ -n "${LOCAL_RC_LOADED+1}" ]; then
+#    echo "Local already loaded, returning"
+#    return 0
+#fi
+# LOCAL_RC_LOADED="true"
+# Have zshenv load a local env file, and put rest in zshrc

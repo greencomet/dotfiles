@@ -1,0 +1,668 @@
+#if [[ "${ZSHRC_ALL_ENABLED}" == "true" ]]
+#then
+#    return
+#fi
+
+#export ZSHRC_ALL_ENABLED="true"
+
+## https://unix.stackexchange.com/questions/76505/portable-way-to-get-scripts-absolute-path
+## ZSHRC_ALL_FILEPATH=${0:a}
+## DOTFILE_ROOT=${0:a:h}
+#
+
+# Needed before color prompts are loaded, put them together if poss.
+# Needed to enable colors https://discussions.apple.com/thread/2059528
+#DOTFILE_ROOT=${0:a:h}
+
+autoload -U colors
+colors
+
+export NEW_DOTFILE_ROOT=${0:a:h}
+export NEW_MAGNUM_ROOT="${NEW_DOTFILE_ROOT}/.."
+export NEW_DOCKER_IMAGES_ROOT="${NEW_MAGNUM_ROOT}/docker-images"
+
+export PATH="$PATH:${NEW_DOCKER_IMAGES_ROOT:?}/userscripts"
+## TODO check these dir exists properly
+
+source "${NEW_MAGNUM_ROOT}/docker-images/userscripts/.zshrc"
+
+## Install with `sudo apt-get install iptables-persistent`
+## https://askubuntu.com/questions/119393/how-to-save-rules-of-the-iptables
+# alias iptables-persistent-save-mine='sudo netfilter-persistent save'
+## https://linuxconfig.org/how-to-make-iptables-rules-persistent-after-reboot-on-linux
+## TODO Double check that file exists first before writing to it
+alias iptables-persistent-save-mine='sudo iptables-save > /etc/iptables/rules.v4'
+
+alias ssh-keygen-secure='ssh-keygen -t rsa -b 4096' ## https://blog.kovah.de/en/2019/switching-from-rsa-to-ecdsa/
+# alias ssh-keygen-secure='ssh-keygen -t ecdsa -b 521' ## https://blog.kovah.de/en/2019/switching-from-rsa-to-ecdsa/
+# alias ssh-keygen-secure='ssh-keygen -t ed25519 -a 200' ## https://blog.peterruppel.de/ed25519-for-ssh/
+
+#echo "Got dotfile root: ${DOTFILE_ROOT:?}"
+DOTFILE_ROOT=$(cat "${HOME:?}/.dotfile_root")
+if [ ! -d "${DOTFILE_ROOT}" ]; then
+    echo "Error: DOTFILE_ROOT not found at directory '${DOTFILE_ROOT}'"
+    return 1
+fi
+source "${DOTFILE_ROOT:?}/.zshrc.prompt"
+alias less='less -r'
+alias dd-32gb='dd if=/dev/zero of="large-file-$(date +%s)" bs=65536 count=524288'
+alias ix="curl -F 'f:1=<-' ix.io"
+alias get-max-cmdline-args='getconf ARG_MAX'
+alias get-public-ip='curl ifconfig.me'
+alias rsync-resume='rsync -PLz'
+export BORG_SUFFIX='{utcnow:%Y%m%d-%H%M%S%z}_{borgversion}'
+#alias rsync-resume='rsync -P -z --compress-level=9 --copy-links'
+#alias rsync-resume='rsync -P -z --compress-level=9 --copy-links -e ssh'
+alias ssh-multi='TMUX="" tmux neww /Users/mvembakk/AllFiles/repositories/personal/dotfiles/pathscripts/ssh-multi-helper $@'
+save-page() {
+  mkdir -p "${HOME}/pages" && cd "${HOME}/pages" && download-page "${1}"
+}
+
+## Splits a file into 500M chunks. Chunks are created in the same dir prefixed with the filename and _
+split-500M(){
+ if [ "$#" -ne 1 ] || ! [ -f "$1" ]; then
+   echo "Usage: $0 filename" >&2
+   return 1
+ fi 
+ split --bytes=500M "${1}" "${1}_"
+}
+
+## Reduce Brightness ubuntu
+# xrandr -q | grep " connected"                                                                                                                                                                                                              /home/matt
+# eDP-1 connected (normal left inverted right x axis y axis)
+# HDMI-1 connected primary 3440x1440+0+0 (normal left inverted right x axis y axis) 797mm x 333mm
+# xrandr --output HDMI-1 --brightness 0.5
+
+open-page() {
+    ( mkcd && tar xzf "${1}" && open $(find . -name '*.html' | head -n 1) )
+}
+
+gzip-date() {
+    gzip --suffix "-$(date +%s).gz" "${@}"
+}
+
+
+save-page-open() {
+   saved_page=$(save-page "$1" | sed 's/Downloaded page successfully to //g')
+   open-page "${saved_page}"
+   #mkcd && tar xzf $(save-page "$1" | sed 's/Downloaded page successfully to //g') && open $(find . -name '*.html')
+}
+
+#alias download-page='wget -ENpk'
+alias download-site='wget \
+     --recursive \
+     -N \
+     --page-requisites \
+     --convert-links \
+     --no-parent'
+     #--domains website.org \
+     #--no-clobber \
+     #--html-extension \
+     #--restrict-file-names=windows \
+#alias ssh-multi='TMUX="" tmux neww /Users/mvembakk/AllFiles/Personal/dotfiles/pathscripts/ssh-multi-helper $@'
+#alias ssh-multi="TMUX='' tmux neww ${NADOT_RHOME}/pathscripts/ssh-multi-helper '$@'"
+alias glsync='clear && watch "git pull && git add . && git commit -am Blah && git push"'
+alias ssh-agent-add='eval `ssh-agent -s`; ssh-add "$@"'
+alias ssh-pass='eval `ssh-agent -s`; ssh-add'
+alias viewdiff="vimdiff -R $@"
+alias removealliml="find . -name '*.iml' -print0 | xargs -0 rm"
+alias wget-page="wget --page-requisites --html-extension --convert-links $@"
+# https://janezurevc.name/download-entire-web-page-using-wget
+alias wget-website="wget \
+     --recursive \
+     --no-clobber \
+     --page-requisites \
+     --html-extension \
+     --convert-links \
+     --restrict-file-names=windows \
+     --domains example.com \
+     --no-parent $@"
+alias trim="awk '{$1=$1};1'"
+alias pdf-shrink='ps2pdf -dPDFSETTINGS=/ebook input.pdf output.pdf'
+#alias dots="${DOTFILE_ROOT}/python/.venv/bin/python3 ${DOTFILE_ROOT}/python/bin/dots"
+export PATH="${DOTFILE_ROOT}/python/bin:${PATH}"
+alias docker-pwd='docker run -v "$PWD:/local" -ti ubuntu bash'
+
+## GIT
+#alias git-ancestor="git show-branch -a \
+#    | grep '\*' \
+#    | grep -v `git rev-parse --abbrev-ref HEAD` \
+#    | head -n1 \
+#    | sed 's/.*\[\(.*\)\].*/\1/' \
+#    | sed 's/[\^~].*//'"
+#alias git-ancestor="git show-branch -a \
+#    | grep '\*' \
+#    | grep -v `git rev-parse --abbrev-ref HEAD` \
+#    | uniq \
+#    | sed 's/.*\[\(.*\)\].*/\1/' \
+#    | sed 's/[\^~].*//'"
+
+git-ancestor() {
+    git show-branch -a \
+    | grep '\*' \
+    | grep -v `git rev-parse --abbrev-ref HEAD` \
+    | uniq \
+    | sed 's/.*\[\(.*\)\].*/\1/' \
+    | sed 's/[\^~].*//'
+}
+
+alias convert-high-quality-pdf='convert           \
+   -verbose       \
+   -density 150   \
+   -trim          \
+    test.pdf      \
+   -quality 100   \
+   -flatten       \
+   -sharpen 0x1.0'
+# 24-18.jpg'
+
+alias git-list-authors='git shortlog -e -s -n'
+#alias date-sync='sudo date -s "$(tlsdate -V -n -H encrypted.google.com)"'
+alias date-sync='current_date="$(tlsdate -V -n -H encrypted.google.com)" && sudo date -s "$current_date"'
+
+## 7zip encrypt
+#https://www.pontikis.net/blog/easily-compress-encrypt-files-using-7z-p7zip-linux
+#sudo apt-get install p7zip-full p7zip-rar
+#7z a -p -mx=0 -mhe -t7z <target>.7z <source files>
+
+
+## MAVEN
+
+mt() {
+    (
+        git-temp && echo "Running in $PWD with commitId: $(git rev-parse HEAD), args: $@" && mvn "$@"
+        error_code="$?"
+        echo "Completed build for commitId: $(git rev-parse HEAD) with error code: ${error_code}" && exit "${error_code}"
+    )
+}
+
+alias mvn-minimal-install='mvn clean install -Dmaven.test.skip=true -Dpmd.skip=true -Dpmd.failOnViolation=false -Dfindbugs.skip=true'
+alias mvn-quick-test='mvn -Dcheckstyle.skip -Dfindbugs.skip=true -Dpmd.skip=true clean install'
+alias mt-quick-test='mt -Dcheckstyle.skip -Dfindbugs.skip=true -Dpmd.skip=true clean install'
+alias mvn-quick='mvn -Denforcer.skip=true -Dcheckstyle.skip -Dfindbugs.skip=true -Dpmd.skip=true -Dmaven.test.skip=true clean install'
+alias mvn-super-quick='mvn -Denforcer.skip=true -Dcheckstyle.skip -Dfindbugs.skip=true -Dpmd.skip=true -Dmaven.test.skip=true package'
+alias mt-quick='mt -Dcheckstyle.skip -Dfindbugs.skip=true -Dpmd.skip=true -Dmaven.test.skip=true clean install'
+alias mvn-sort-pom='mvn com.github.ekryd.sortpom:sortpom-maven-plugin:sort'
+alias mvn-list-pom='mvn org.apache.maven.plugins:maven-dependency-plugin:3.0.1:list'
+alias mvn-dependency-source="mvn dependency:tree -Dincludes=$1"
+
+alias delombok='java -jar ~/Installs/lombok.jar delombok'
+
+# Adds autocompletion for git, might not always be necessary
+autoload -Uz compinit && compinit
+
+alias run-background='TMUX="" tmux -S /tmp/bg new -d "$@"'
+alias list_to_cs='awk -vORS=, "{ print $1 }" | sed "s/,$/\n/"'
+alias connected_ports='lsof -i'
+alias ssh-password-only='ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no'
+#alias git-fetch-bitbucket-pr='git fetch origin refs/pull-requests/$PR_NO/from:$LOCAL_BRANCH'
+#alias git-fetch-bitbucket-pr="echo git fetch origin refs/pull-requests/$1/from:$1"
+#alias iptables-persist='sudo iptables-save > /etc/iptables/rules.v4; sudo ip6tables-save > /etc/iptables/rules.v6'
+#alias psparent="ps -o ppid=" 
+# TODO Command nn that creates a new note with autogenerated name we can type in
+
+## FZF
+export FZF_COMPLETION_TRIGGER='``'
+export FZF_COMPLETION_OPTS='+c -x -i'
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+export PATH="$PATH:${DOTFILE_ROOT}/pathscripts"
+export PATH="$PATH:${DOTFILE_ROOT}/userscripts"
+alias ga='git-annex'
+alias ga-refresh='ga sync --no-pull --no-push'
+
+export EDITOR="vi"
+
+#alias jsonpretty="python -mjson.tool"
+
+# time head -c 100000000 /dev/zero | shasum -a 512 ## finds speed of sha 512
+#
+#
+
+
+alias gp='git push'
+alias gc='git commit'
+alias gca='git commit -a'
+alias gcm='git commit -m'
+alias gcam='git commit -am'
+alias gits='git status'
+alias gb='git branch'
+
+alias grep='grep --color=always'
+
+#alias no-internet='sg no-internet'
+
+osname=$(uname -s)
+if [ "$osname" = "Darwin" ]; then
+     # It is a mac
+     source "${DOTFILE_ROOT}/.zshrc.mac"
+elif [ "$osname" = "Linux" ]; then
+      # Its a Linux
+     source "${DOTFILE_ROOT}/.zshrc.linux"
+fi
+
+function gitdiff {
+    value="vimdiff =(git show HEAD~1:$1) =(git show HEAD:$1)"
+    `$value`
+}
+
+function git-fetch-pr-bitbucket {
+  if [ ! -z "$1" ]
+  then
+    remote="origin"
+    current_date=$(date '+%Y%m%d%H%M%S')
+    if [ ! -z "$2" ]
+    then
+      remote="$2"
+      if [ ! -z "$3" ]
+      then
+          current_date="${3}"
+      fi
+    fi
+    git fetch "$remote" "refs/pull-requests/$1/from:bitbucket-$remote-pr${1}-${current_date}"
+  else
+    echo "Usage: $0 <PR-Number> [<remote>]"
+    #echo "Need to provide PR number to pull from"
+  fi
+}
+
+function git-fetch-pr-bitbucket-all {
+    current_date=$(date '+%Y%m%d%H%M%S')
+    git fetch origin "+refs/pull-requests/*/from:refs/heads/bitbucket-pr-${current_date}/*"
+    #git fetch origin '+refs/pull-requests/*/from:refs/remotes/origin/pr/*'
+    #for pr in $(git ls-remote | grepnocolor -oh -e 'refs/pull-requests/\d*\/from' | sed 's/refs\/pull-requests\///g' | sed 's/\/from//g'); do echo "Got PR: ${pr}"; git-fetch-pr-bitbucket "${pr}" origin "${current_date}"; done
+}
+
+function git-fetch-pr-github-all {
+    current_date=$(date '+%Y%m%d%H%M%S')
+    git fetch "${1:-origin}" "+refs/pull/*/head:refs/heads/github-pr-${current_date}/*"
+}
+
+function git-fetch-pr-github {
+  if [ ! -z "$1" ]
+  then
+    remote="origin"
+    if [ ! -z "$2" ]
+    then
+      remote="$2"
+    fi
+    git fetch "$remote" "refs/pull/$1/from:github-$remote-pr$1"
+  else
+    echo "Usage: $0 <PR-Number> [<remote>]"
+    #echo "Need to provide PR number to pull from"
+  fi
+}
+
+function git-config-pr-refs-bitbucket {
+  if [ ! -z "$1" ]
+  then
+    remote="$1"
+    echo "Configuring remote: $remote"
+    #git config --add "remote.$remote.fetch" "+refs/pull-requests//from:refs/remotes/$remote/pr/"
+    git config --add "remote.$remote.fetch" "+refs/pull-requests/*/from:refs/remotes/$remote/pr/*"
+  else
+    echo "Usage: $0 <remote>"
+  fi
+}
+
+function git-config-pr-refs-github {
+  if [ ! -z "$1" ]
+  then
+    remote="$1"
+    echo "Configuring remote: $remote"
+    #git config --add "remote.$remote.fetch" "+refs/pull//head:refs/remotes/$remote/pr/"
+    git config --add "remote.$remote.fetch" "+refs/pull/*/head:refs/remotes/$remote/pr/*"
+  else
+    echo "Usage: $0 <remote>"
+  fi
+}
+
+function ga-temp {
+  git-temp || return 1
+  git config remote.origin.annex-readonly true
+  git remote set-url --push origin INVALID
+  ga dead .
+  git branch --unset-upstream
+  ga init INVALID
+}
+
+function ga-temp-old {
+	TEMPGAROOT="$HOME/.git-annex-tracker"
+	root=`/usr/bin/git root`
+	rootname=$(basename "$root")
+	echo "Repo root is at: $root"
+	echo "Root name is: $rootname"
+	tempga="$TEMPGAROOT/tracker_$rootname.git"
+	if [ -d "$tempga" ]
+	then
+		echo "Directory already exists"
+	else
+		echo "Directory doesn't exist"
+		git init --bare "$tempga"
+	fi
+	mkcd
+	git init
+	git remote add origin "$root"
+	git fetch origin
+    git config remote.origin.annex-readonly true
+	git remote set-url --push origin INVALID
+	git checkout master
+	ga init INVALID
+	git remote add tracker "$tempga"
+	#ga dead web
+	ga dead .
+	git branch --unset-upstream
+	ga sync
+}
+
+bindkey -M vicmd v edit-command-line
+
+#bindkey -v
+#bindkey '\e[3~' delete-char
+bindkey '^R' history-incremental-search-backward
+
+alias column-csv='column -s "," -t'
+
+function cless {
+    if [ ! -z "$1" ]
+    then 
+        source-highlight -i $1 -o STDOUT --out-format esc | less -r
+    fi
+}
+
+autoload -U edit-command-line
+zle -N edit-command-line
+
+bindkey -M vicmd v edit-command-line
+
+bindkey -v
+
+#function mkcd {
+#    if [ $# = 0 ] 
+#    then 
+#            echo No Folder name given
+#
+#    elif  [ -d $1 ]	
+#    then 
+#                    echo Folder already exists 
+#                    cd $1
+#    else
+##                    echo Creating a new folder
+#                    mkdir  -p $1
+#                    cd $1	
+#    fi
+#}
+
+precmd() {
+}
+
+#PROMPT="[%{$fg[red]%}%n%{$reset_color%}@%{$fg[blue]%}%m:%{$fg_no_bold[yellow]%}%/] %{$reset_color%}%#"
+#RPROMPT="[%{$fg_no_bold[yellow]%}%?%{$reset_color%}]"
+
+
+if test -z "$CUSTOMSHELL"
+then
+  PROMPT="[%{$fg[red]%}%n%{$reset_color%}@%{$fg[blue]%}%m]%{$reset_color%} "
+  RPROMPT_DIRPATH="%{$fg_no_bold[yellow]%}%/%{$reset_color%}"
+fi
+
+
+# Uncomment for clock here
+#setopt PROMPT_SUBST
+#PROMPT='%B%F{red}%n@%m%f%F{yellow}[%D{%L:%M:%S}]%f:%F{blue}${${(%):-%~}}%f$ %b'
+#PROMPT="[%{$fg[red]%}%n%{$reset_color%}@%{$fg[blue]%}%m:%{$fg_no_bold[yellow]%}%/]:[%D{%L:%M:%S}] %{$reset_color%}%#"
+#PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[blue]%}%m%{$fg_no_bold[yellow]%}[%D{%L:%M:%S}] %{$reset_color%}"
+#TMOUT=1
+
+#TRAPALRM() {
+#    zle reset-prompt
+#}
+
+maketempdir() {
+    #tempdir=$(TMPDIR="/tmp" mktemp -d -t tmp) #This only works on Mac # => uname -s = Darwin
+    #tempdir=`mktemp -d` #Linux => uname -s = Linux
+    tempdir="/dev/null"
+    osname=$(uname -s)
+    if [ $osname = "Darwin" ]; then
+      # Its a Mac
+      tempdir=$(TMPDIR="/tmp" mktemp -d -t tmp) #This only works on Mac # => uname -s = Darwin
+    elif [ $osname = "Linux" ]; then
+      # Its a Linux
+      tempdir=$(mktemp -d) #Linux => uname -s = Linux
+    else
+      tempdir=$(TMPDIR="/tmp" mktemp -d -t tmpXXXXXX) #Both mac and linux
+    fi
+    echo "$tempdir"
+}
+
+mkcd() {
+  if [ ! -z "$1" ]
+  then
+    echo "Got input $1"
+    if [ -d "$1" ]
+    then
+      echo "Folder already exists"
+      cd "$1"
+    else
+      echo "Creating a new folder $1"
+      mkdir -p "$1"
+      cd "$1"
+    fi
+  else
+    echo "Got no input, creating a temporary directory"
+    #tempdir=$(TMPDIR="/tmp" mktemp -d -t tmp) #This only works on Mac
+    #tempdir=`mktemp -d` #Linux
+    #tempdir=$(TMPDIR="/tmp" mktemp -d -t tmpXXXXXX) #Both mac and linux
+    tempdir=$(maketempdir)
+    cd "$tempdir"
+  fi 
+    
+}
+
+git-temp() {
+        #tdir=`mktemp -d` # Linux
+        #tdir=$(TMPDIR="/tmp" mktemp -d -t tmp) #This only works on Mac
+        tdir=$(maketempdir)
+        echo "$tdir"
+        commit_id=`/usr/bin/git rev-parse HEAD` 
+        current_dir="$PWD"
+        git_root=$(git root)
+        #relative_path=$(realpath --relative-to="$git_root" "$current_dir")
+        relative_path=$(find-relative-path "$git_root" "$current_dir")
+        tempdir="$tdir/$commit_id" 
+        mkdir "$tempdir"
+        /usr/bin/git diff-index --quiet HEAD
+        ret=$? 
+        if [ $ret -eq 0 ]
+        then
+                echo "Its clean, proceeding"
+        else
+                echo "Its dirty, not proceeding"
+                return 1
+        fi
+        #commit_needed="HEAD" 
+        #if [ ! -z "$1" ]
+        #then
+        #        commit_needed="$1" 
+        #fi
+        #echo "Going with $commit_needed"
+        #git --work-tree "$tempdir" checkout -f "$commit_needed"
+        #reponame=$(basename "$PWD")
+        reponame=$(basename "$git_root")
+        echo "Got reponame: $reponame"
+        #cd "$tempdir"
+        git clone "$git_root" "$tempdir/$reponame"
+        finalpath="$tempdir/$reponame/$relative_path"
+        echo "Moving to ${finalpath}"
+        cd "${finalpath}"
+        #git remote rm origin
+}
+
+alias ls='ls --color=auto'
+
+### Try to fix zshrc up-line-history thing in ubuntu/debian ####
+
+#export TERM=rxvt-unicode
+
+#[[ -z "$terminfo[cuu1]" ]] || bindkey -M viins "$terminfo[cuu1]" vi-up-line-or-history
+#[[ -z "$terminfo[kcuu1]" ]] || bindkey -M viins "$terminfo[kcuu1]" vi-up-line-or-history
+
+#[[ -z "$terminfo[cuu1]" ]] || bindkey -M viins "$terminfo[cuu1]" vi-up-line
+#[[ -z "$terminfo[kcuu1]" ]] || bindkey -M viins "$terminfo[kcuu1]" vi-up-line
+#[[ "$terminfo[kcuu1]" == ""* ]] && bindkey -M viins "${terminfo[kcuu1]/O/[}" vi-up-line
+
+autoload -Uz up-line-or-beginning-search
+autoload -Uz down-line-or-beginning-search
+zle -N up-line-or-beginning-search up-line-or-beginning-search
+zle -N down-line-or-beginning-search down-line-or-beginning-search
+bindkey -v
+bindkey "^[[A" up-line-or-beginning-search
+bindkey "^[[B" down-line-or-beginning-search
+
+#[[ -z "$terminfo[kcuu1]" ]] || bindkey -M viins "$terminfo[kcuu1]" vi-up-line-or-history
+#[[ -z "$terminfo[kcud1]" ]] || bindkey -M viins "$terminfo[kcud1]" vi-down-line-or-history
+
+# [...] and fixups for ncurses' application mode:
+#[[ "$terminfo[kcuu1]" == ""* ]] && bindkey -M viins "${terminfo[kcuu1]/O/[}" vi-up-line-or-history
+#[[ "$terminfo[kcud1]" == ""* ]] && bindkey -M viins "${terminfo[kcud1]/O/[}" vi-down-line-or-history
+
+#http://comments.gmane.org/gmane.comp.shells.zsh.user/9835
+#http://comments.gmane.org/gmane.comp.shells.zsh.user/9836
+#http://blog.gmane.org/gmane.comp.shells.zsh.user/month=20050101
+#http://serverfault.com/questions/359277/linux-terminal-change-cursor-position-after-up-arrow-key-press
+#### ###
+
+
+#export TZ=US/Pacific
+#export TZ="/usr/share/zoneinfo/US/Pacific"
+
+
+# Some useful aliases #
+alias firefox-no-remote='firefox -p -no-remote > /dev/null 2>&1 & disown'
+alias psparent="ps -o ppid="
+alias psuptime='ps -p "$$" -o etime='
+
+
+
+#export HISTSIZE=999999; #might be useless
+export HISTSIZE=9999999 #might be useless
+#export SAVEHIST=100000
+export SAVEHIST=9999999
+export HISTFILE=~/.zsh_history
+setopt append_history
+setopt hist_expire_dups_first
+setopt hist_find_no_dups
+setopt hist_ignore_all_dups
+setopt hist_ignore_dups
+setopt hist_ignore_space
+setopt hist_no_store
+setopt hist_reduce_blanks
+setopt hist_save_no_dups
+setopt hist_verify
+setopt inc_append_history
+#setopt no_hist_allow_clobber
+setopt no_hist_beep
+#setopt share_history
+
+
+## UNTESTED. supposed to set it up so that it takes agent configured somewhere else and brings it here.
+ssh-reagent () {
+  #for agent in /tmp/ssh-*/agent.*; do
+  for agent in "$TMPDIR"/ssh-*/agent.*; do
+      export SSH_AUTH_SOCK=$agent
+      if ssh-add -l 2>&1 > /dev/null; then
+         echo Found working SSH Agent:
+         ssh-add -l
+         return
+      fi
+  done
+  echo Cannot find ssh agent - maybe you should reconnect and forward it?
+}
+
+docker-kill-all() {
+   sudo docker stop $(sudo docker ps -q)
+}
+
+# Identify hosts with working ssh
+ssh-test-hosts() {
+    #for host in $@; do ssh "$host" 'echo $HOSTNAME worked' || echo "$host failed"; done 2>/dev/null
+    for host in $@; do ssh "$host" "echo $host worked" || echo "$host failed"; done 2>/dev/null
+}
+
+fixvmimages () {
+  for VM in `vboxmanage list vms | cut -d' ' -f1| sed 's/"//g'` ;
+  do
+    echo $VM; vboxmanage modifyvm "${VM}" --usbehci off;
+  done
+}
+
+docker-term () {
+    sudo docker exec -ti $(sudo docker ps -q | head -n 1) bash
+}
+
+git-check-clean() {
+        /usr/bin/git diff-index --quiet HEAD
+        ret=$? 
+        if [ $ret -eq 0 ]
+        then
+                echo "Its clean, proceeding"
+                return 0
+        else
+                echo "Its dirty, not proceeding"
+                return 1
+        fi
+}
+
+#alias mt-test-commit='(git-temp; git checkout ${1}; mvn clean install)'
+mt-test-commit() {
+    # TODO Check only one argument
+    (
+        tempdir=$(maketempdir) && cd "${tempdir}" && git clone "${OLDPWD}" repo && cd repo && git checkout ${1} && mvn clean install
+    )
+}
+
+git-reset-branch() {
+    (
+        set -e
+        if [ -z "$1" ]; then
+            echo "Branch name not given, usage: ${0} <git-branch> <commit-id>"
+            return 1
+        fi
+        if [ -z "$2" ]; then
+            echo "Commit id not given, usage: ${0} <git-branch> <commit-id>"
+            return 1
+        fi
+        BRANCH_NAME="${1}"
+        COMMIT_ID="${2}"
+        CURRENT_COMMIT=$(/usr/bin/git rev-parse HEAD)
+        git-check-clean
+        echo "Replacing branch: ${BRANCH_NAME} with commit_id: ${COMMIT_ID} from: ${CURRENT_COMMIT}"
+        git checkout "${BRANCH_NAME}"
+        git reset --hard "${COMMIT_ID}"
+        echo "Replaced branch: ${BRANCH_NAME} with commit_id: ${COMMIT_ID} from: ${CURRENT_COMMIT}"
+        if [ "${FORCE_PUSH_BRANCH}" = "true" ]; then
+            #git push -f origin $(git cb)
+            echo "Would force push branch here"
+        fi
+        git checkout -
+    )
+}
+
+### Set up zsh shell to have current time on the right, and reset it every second ###
+## https://stackoverflow.com/questions/13125825/zsh-update-prompt-with-current-time-when-a-command-is-started
+DEFAULT_PROMPT='[%{%}%n%{%}@%{%}%m]%{%}'
+CURRENT_TIME_PROMPT='[%D{%L:%M:%S %p}]'
+MILITARY_TIME_PROMPT='[%D{%Y-%m-%d %H:%M:%S}]'
+#PROMPT="${CURRENT_TIME_PROMPT}-${DEFAULT_PROMPT} "
+PROMPT="${MILITARY_TIME_PROMPT}-${DEFAULT_PROMPT} "
+#RPROMPT='[%D{%L:%M:%S %p}]'
+### Enable these lines to make it auto reset timestamp
+#TMOUT=1
+#TRAPALRM() {
+#    zle reset-prompt
+#}
+###
+#
+
+## TODO Figure out how to get gitprompt working
+# https://news.ycombinator.com/item?id=14049961

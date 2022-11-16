@@ -1,0 +1,64 @@
+find-relative-path() {
+    #TODO Test and error handling
+    REL_ROOT_DIR="$1"
+    REL_INNER_DIR="$2"
+    echo "$(python -c "import os.path; print os.path.relpath('"$REL_INNER_DIR"', '"$REL_ROOT_DIR"')")"
+}
+
+# COLOR TRICKS from http://osxdaily.com/2013/02/05/improve-terminal-appearance-mac-os-x/ ##
+export CLICOLOR=1
+export LSCOLORS=ExFxBxDxCxegedabagacad
+#alias ls='ls -GFh'
+
+
+## SSH Autocomplete for Mac # came from https://gist.github.com/aliang/1024466
+_complete_ssh_hosts ()
+{
+        COMPREPLY=()
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        comp_ssh_hosts=`cat ~/.ssh/known_hosts | \
+                        cut -f 1 -d ' ' | \
+                        sed -e s/,.*//g | \
+                        grep -v ^# | \
+                        uniq | \
+                        grep -v "\[" ;
+                cat ~/.ssh/config | \
+                        grep "^Host " | \
+                        awk '{print $2}'
+                `
+        COMPREPLY=( $(compgen -W "${comp_ssh_hosts}" -- $cur))
+        return 0
+}
+#complete -F _complete_ssh_hosts ssh
+## Done
+
+save_latest_screenshot() {
+    (
+        if [ -z $1 ]; then
+            echo "Please provide location to copy image to"
+            exit 1
+        fi
+        cd "${HOME}/Desktop"
+        target_name="${1}"
+        file_name="$(ls -At | grepnocolor Screen | head -n 1)"
+        cd -
+        [[ ${target_name} == *.png ]] || target_name+=.png
+        cp "${HOME}/Desktop/${file_name}" "${target_name}"
+    )
+}
+
+alias brew-no-update='HOMEBREW_NO_AUTO_UPDATE=1 brew'
+
+brew-update-later() {
+    HOMEBREW_NO_AUTO_UPDATE=1 brew "$@" && echo "Done with command, updating brew now..." && brew update
+}
+
+install_brew_no_update_alias() {
+    ## One time set up to enable alias
+    ## https://github.com/Homebrew/brew/issues/1670
+    brew alias install_no_autoupdate='!HOMEBREW_NO_AUTO_UPDATE=1 brew install'
+}
+
+export HOMEBREW_NO_ANALYTICS=1
+export HOMEBREW_NO_AUTO_UPDATE=1
+alias ls=ls

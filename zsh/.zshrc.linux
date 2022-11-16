@@ -1,0 +1,6 @@
+find-relative-path() {
+    #TODO Test and error handling
+    REL_ROOT_DIR="$1"
+    REL_INNER_DIR="$2"
+    echo "$(realpath --relative-to="$REL_ROOT_DIR" "$REL_INNER_DIR")"
+}
